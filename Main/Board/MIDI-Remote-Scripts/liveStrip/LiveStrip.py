@@ -1,115 +1,186 @@
+# -*- coding: utf-8 -*-
 #LiveStrip.py
 
 from __future__ import with_statement
 import Live 
-from _Framework.ControlSurface import ControlSurface # Central base class for scripts based on the new Framework
-from _Framework.ButtonElement import ButtonElement # Class representing a button a the controller
-import Settings
+import time
+from _Framework.ControlSurface import ControlSurface
+from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
+from _Framework.SessionComponent import SessionComponent
+from _Framework.DeviceComponent import DeviceComponent
+from _Framework.ButtonElement import ButtonElement #ButtonElement(is_momentary, msg_type, channel, identifier)
+
+import settings
 from consts import *
 
-DO_COMBINE = Live.Application.combine_apcs()  # requires 8.2 & higher
+do_nothing = False		#used to stop script compiler stalling. false or true doesn't matter.
 
 class LiveStrip(ControlSurface):
-	_active_instances = []
+  #Control Surface is central base class. acts as container.
+  __module__ = __name__
+  __doc__ = "Ableton Live control surface script for LiveStrip"
 
-    def __init__(self, c_instance):
-		#live = Live.Application.get_application()
-		#self._live_major_version = live.get_major_version()
-		#self._live_minor_version = live.get_minor_version()
-		#self._live_bugfix_version = live.get_bugfix_version()
-		ControlSurface.__init__(self, c_instance)
-		#self._device_selection_follows_track_selection = True
-		with self.component_guard():
-			self._suppress_send_midi = True
-			self._suppress_session_highlight = True
+  def __init__(self, c_instance):
+    ControlSurface.__init__(self, c_instance)
+    with self.component_guard():
+      self._suppress_send_midi = True
+      self._suppress_session_highlight = True
+	  #non-throw-away variables ???
+	  #self._suggested_input_port = 'LiveStrip'		#???
+      #self._suggested_output_port = 'LiveStrip'	#???
+      #self._control_is_with_automap = False #for buttons ??? mabye for user-defined mappings 
+      self._transport = None #setup a blank transport 
+      self._session = None #setup a blank session
+      self._device = None #setup a blank device
+      #self._is_locked = False #for device or track
+      self.setup_button_control()	#buttons first - important
+      #self.setup_rotary_control()   #then rotary encoders - important
+      self.setup_transport_control() #then transport..
+      self.setup_session_control()	#..then the rest
+      self.setup_device_control()
+      self.assign_button_control()	#after everything is set up we can then assign the buttons to things. ref this for updating aswell ???
+      self._end_buttons[0].add_value_listener(self._bt0_value)
+      self._end_buttons[1].add_value_listener(self._bt1_value)
+      self._end_buttons[2].add_value_listener(self._bt2_value)
+      self._end_buttons[3].add_value_listener(self._bt3_value)
+      self.set_highlighting_session_component(self._session)
+      self._suppress_session_highlight = False
+    self.log_message("LiveStrip loaded")
 
-			is_momentary = True
-			self._suggested_input_port = 'LiveStrip'
-			self._suggested_output_port = 'LiveStrip'
-			self._control_is_with_automap = False
-			#self._user_byte_write_button = ButtonElement(is_momentary, MIDI_CC_TYPE, 0, 16)
-			#self._user_byte_write_button.name = 'User_Byte_Button'
-			#self._user_byte_write_button.send_value(1)
-			#self._user_byte_write_button.add_value_listener(self._user_byte_value)
-			#self._wrote_user_byte = False
-			#self._challenge = Live.Application.get_random_int(0, 400000000) & 2139062143
-			#matrix = ButtonMatrixElement()
-			#matrix.name = 'Button_Matrix'
-			#for row in range(8):
-			#	button_row = []
-			#	for column in range(8):
-			#		button = ConfigurableButtonElement(is_momentary, MIDI_NOTE_TYPE, 0, row * 16 + column)
-			#		button.name = str(column) + '_Clip_' + str(row) + '_Button'
-			#		button_row.append(button)
-
-			#	matrix.add_row(tuple(button_row))
-
-			#self._config_button = ButtonElement(is_momentary, MIDI_CC_TYPE, 0, 0, optimized_send_midi=False)
-			#self._config_button.add_value_listener(self._config_value)
-			#top_buttons = [ConfigurableButtonElement(is_momentary, MIDI_CC_TYPE, 0, 104 + index) for index in range(8)]
-			#side_buttons = [ConfigurableButtonElement(is_momentary, MIDI_NOTE_TYPE, 0, SIDE_NOTES[index]) for index in range(8)]
-			#top_buttons[0].name = 'Bank_Select_Up_Button'
-			#top_buttons[1].name = 'Bank_Select_Down_Button'
-			#top_buttons[2].name = 'Bank_Select_Left_Button'
-			#top_buttons[3].name = 'Bank_Select_Right_Button'
-			#top_buttons[4].name = 'Session_Button'
-			#top_buttons[5].name = 'User1_Button'
-			#top_buttons[6].name = 'User2_Button'
-			#top_buttons[7].name = 'Mixer_Button'
-			#side_buttons[0].name = 'Vol_Button'
-			#side_buttons[1].name = 'Pan_Button'
-			#side_buttons[2].name = 'SndA_Button'
-			#side_buttons[3].name = 'SndB_Button'
-			#side_buttons[4].name = 'Stop_Button'
-			#side_buttons[5].name = 'Trk_On_Button'
-			#side_buttons[6].name = 'Solo_Button'
-			#side_buttons[7].name = 'Arm_Button'
-			#self._osd = M4LInterface()
-			#self._osd.name = "OSD"
-			##self._selector = MainSelectorComponent(matrix, tuple(top_buttons), tuple(side_buttons), self._config_button, self._osd, self)
-			##self._selector.name = 'Main_Modes'
-			self._do_combine()
-			#for control in self.controls:
-			#	if isinstance(control, ConfigurableButtonElement):
-			#		control.add_value_listener(self._button_value)
-
-			self.set_highlighting_session_component(self._selector.session_component())
-			self._suppress_session_highlight = False
-
-			self.log_message("LiveStrip loaded")
-
-	def _combine_active_instances():
-	
-	
-	_combine_active_instances = staticmethod(_combine_active_instances)
-	
-	def _do_combine(self):
-	
-	def _do_uncombine(self):
-	
-	def _activate_combination_mode(self, track_offset, support_devices):
-	
-	#def refresh_state(self):
-	
-	//
-	
-	
-  def _combine_active_instances():
-    #nothing
-  
-  #_combine_active_instances = staticmethod(_combine_active_instances)
-  
-  def _do_combine(self):
-    #nothing
-  
-  def _do_uncombine(self):
-    #nothing
-  
-  def _activate_combination_mode(self, track_offset, support_devices):
-    #nothing
-  
-  def refresh_state(self):
+  #def refresh_state(self):
     #nothing
 	
+  def disconnect(self):
+    self._suppress_send_midi = True
+    #clean up things
+    self._end_buttons[0].remove_value_listener(self._bt0_value)
+    self._end_buttons[1].remove_value_listener(self._bt1_value)
+    self._end_buttons[2].remove_value_listener(self._bt2_value)
+    self._end_buttons[3].remove_value_listener(self._bt3_value)
+    #create entry in log file then do final control surface disconnect
+    self.log_message(time.strftime("%d.%m.%Y %H:%M:%S", time.localtime()) + " - LiveStrip disconnected")    
+    ControlSurface.disconnect(self)
+    return None
+		
+  def setup_button_control(self):
+    #setup the buttons on the end of the LiveStrip
+	#but does not assign them
+	#prob do something like enter menu mode by selecting 1 & 2 together, ..blink, confirm, ..then use buttons and knobs for selection.
+    is_momentary = True #button setting (throw-away variable)
+    self._end_buttons = [ButtonElement(is_momentary, 0, settings.MIDI_CHANNEL, settings.END_NOTES[index]) for index in range(4)]
+    for index in range(4):
+      #self._end_buttons[index] = ButtonElement(is_momentary, 0, settings.MIDI_CHANNEL, settings.END_NOTES[index])
+      self._end_buttons[index].name = settings.BUTTONS_MAP_LIST[settings.END_BUTTONS_CURRENT[index]]
+  
+  #def setup_rotary_control(self):
+  #setup the rotary encoders
+  
+  def setup_transport_control(self):
+    #is_momentary = True #button setting (throw-away variable)
+    self._transport = TransportComponent() #Instantiate a Transport Component
+    #for index in range(4):
+      #if settings.END_BUTTONS_CURRENT[index] == 4: #BUTTONS_MAP_LIST - play
+        #self._transport.set_play_button(self._end_buttons[index]) #ButtonElement(is_momentary, msg_type, channel, identifier)
+    #for index in range(4):
+      #if settings.END_BUTTONS_CURRENT[index] == 5: #BUTTONS_MAP_LIST - stop
+        #self._transport.set_stop_button(self._end_buttons[index])
+  
+  def setup_session_control(self):
+    #do i actually need session control ??? ...erm..  ...no, i don't think i do
+    #num_tracks = 1 #8 columns (tracks) - see consts
+    #num_scenes = 8 #8 rows (scenes) - see consts
+    #(num_tracks, num_scenes) a session highlight ("red box") 
+    #self.session = SessionComponent(num_tracks,num_scenes)
+    self._session = SessionComponent(settings.NUM_TRACKS, settings.NUM_SCENES)
+    self._session.set_offsets(0,0)
 	
+  def setup_device_control(self):
+    #is_momentary = True
+    self._device = DeviceComponent()
+    self._device.name = 'Device_Component'
+    device_param_controls = []
+    #for index in range(8):
+    #  device_param_controls.append(self._ctrl_map[PARAMCONTROL[index]])
+    #if None not in device_param_controls:
+    #  self._device.set_parameter_controls(tuple(device_param_controls))
+    #self._device.set_on_off_button(self._note_map[DEVICEONOFF])	#have to hand this a button
+    #for index in range(4):
+      #if settings.END_BUTTONS_CURRENT[index] == 1:	#BUTTONS_MAP_LIST - device lock
+        #self._device.set_lock_button(self._end_buttons[index])	#watch out, this way could set several to be the same
+    #for index in range(4):
+      #if settings.END_BUTTONS_CURRENT[index] == 2:	#BUTTONS_MAP_LIST - device onOff
+        #self._device.set_on_off_button(self._end_buttons[index])	#watch out, this way could set several to be the same
+    
+    self.set_device_component(self._device)
+
+  def assign_button_control(self):
+    for index in range(4):
+      self.assign_individual_button_control(index)
+
+  def assign_individual_button_control(self, index):
+      if settings.END_BUTTONS_CURRENT[index] == 0:	#BUTTONS_MAP_LIST - NONE, or internal to LiveStrip unit.
+        #self._device.set_lock_button(self._end_buttons[index])	#watch out, this way could set several to be the same
+        do_nothing = True;
+      elif settings.END_BUTTONS_CURRENT[index] == 1: #BUTTONS_MAP_LIST - play
+        self._transport.set_play_button(self._end_buttons[index]) #ButtonElement(is_momentary, msg_type, channel, identifier)
+      elif settings.END_BUTTONS_CURRENT[index] == 2: #BUTTONS_MAP_LIST - stop
+        self._transport.set_stop_button(self._end_buttons[index])
+      elif settings.END_BUTTONS_CURRENT[index] == 3:	#BUTTONS_MAP_LIST - device lock
+        self._device.set_lock_button(self._end_buttons[index])
+      elif settings.END_BUTTONS_CURRENT[index] == 4:	#BUTTONS_MAP_LIST - device on off
+        self._device.set_on_off_button(self._end_buttons[index])
+      elif settings.END_BUTTONS_CURRENT[index] == 5:	#BUTTONS_MAP_LIST - ???
+        #self._device.set_on_off_button(self._end_buttons[index])
+        do_nothing = False
+		
+      self._end_buttons[index].name = settings.BUTTONS_MAP_LIST[settings.END_BUTTONS_CURRENT[index]]	#set the name
+
+  def _bt0_value(self, value):
+    #callback when bt0 is triggered
+    assert value in range(128)
+    self.button_trigger(0, value)
+    self.log_message("_bt0_value triggered %d" % (value))
 	
+  def _bt1_value(self, value):
+    #callback when bt1 is triggered
+    assert value in range(128)
+    self.button_trigger(1, value)
+    self.log_message("_bt1_value triggered %d" % (value))
+	
+  def _bt2_value(self, value):
+    #callback when bt2 is triggered
+	assert value in range(128)
+	self.button_trigger(2, value)
+	self.log_message("_bt2_value triggered %d" % (value))
+
+  def _bt3_value(self, value):
+    #callback when bt3 is triggered
+	assert value in range(128)
+	self.button_trigger(3, value)
+	self.log_message("_bt3_value triggered %d" % (value))
+
+  def button_trigger(self, index, value):
+    if settings.END_BUTTONS_CURRENT[index] == 0:	#BUTTONS_MAP_LIST - NONE, or internal to LiveStrip unit.
+      #self._device.set_lock_button(self._end_buttons[index])	#watch out, this way could set several to be the same
+      do_nothing = True;
+    elif settings.END_BUTTONS_CURRENT[index] == 1: #BUTTONS_MAP_LIST - play
+      if (value != 0):
+        do_nothing = False
+		#self._play_button.turn_on()
+      else:
+	    do_nothing = True
+		#self._play_button.turn_off()
+    elif settings.END_BUTTONS_CURRENT[index] == 2: #BUTTONS_MAP_LIST - stop
+      self._transport.set_stop_button(self._end_buttons[index])
+    elif settings.END_BUTTONS_CURRENT[index] == 3:	#BUTTONS_MAP_LIST - device lock
+      self._device.set_lock_button(self._end_buttons[index])
+    elif settings.END_BUTTONS_CURRENT[index] == 4:	#BUTTONS_MAP_LIST - device on off
+      self._device.set_on_off_button(self._end_buttons[index])
+    elif settings.END_BUTTONS_CURRENT[index] == 5:	#BUTTONS_MAP_LIST - ???
+      #self._device.set_on_off_button(self._end_buttons[index])
+      do_nothing = False
+	
+#update all buttons
+  #def update_buttons(self):
+    #for index in range(len(self._end_buttons)):
+      #self._end_buttons[index].
