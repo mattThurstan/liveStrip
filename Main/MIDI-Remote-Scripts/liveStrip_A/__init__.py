@@ -2,11 +2,11 @@
 #first script run
 
 #import script class LiveStrip
-from LiveStrip import LiveStrip
+from LiveStrip_A import LiveStrip_A
 
-#creates and returns an instance of LiveStrip
+#creates and returns an instance of LiveStrip_A
 def create_instance(c_instance):
-    return LiveStrip(c_instance)
+    return LiveStrip_A(c_instance)
 
 #for later..
 #from _Framework.Capabilities import *  # noqa
