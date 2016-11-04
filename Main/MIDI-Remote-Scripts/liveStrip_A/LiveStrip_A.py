@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#LiveStrip.py
+#LiveStrip_A.py
 
 from __future__ import with_statement
 import Live 
@@ -15,10 +15,10 @@ from consts import *
 
 do_nothing = False		#used to stop script compiler stalling. false or true doesn't matter.
 
-class LiveStrip(ControlSurface):
+class LiveStrip_A(ControlSurface):
   #Control Surface is central base class. acts as container.
   __module__ = __name__
-  __doc__ = "Ableton Live control surface script for LiveStrip"
+  __doc__ = "Ableton Live control surface script for liveStrip A"
 
   def __init__(self, c_instance):
     ControlSurface.__init__(self, c_instance)
