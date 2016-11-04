@@ -8,10 +8,15 @@
    ..eventually..
    8x rotary encoders, ringed by 16 leds' (mono colour to start with)
    1x small screen (for channel numbers, VU meter, metronome, etc). currently 2x 8x8 LED matrix
+   
+	--- https://www.pjrc.com/teensy/td_libs_Encoder.html --- don't think i will use this as seems overkill, 
+	need these kind of optimisations for when reading a wheel turning or engines, fast stuff. also have to 
+	consider processing power availability
 */
 
-
 #include <Tlc5940.h>
+//#include <lsRotaryEncoder.h>
+//lsRotaryEncoder knob0(0,1);
 
 String progName = "liveStrip_A test";
 String progVers = "0.02";   //don't need this ???
@@ -31,7 +36,7 @@ int knobBt[numberOfKnobs] = {5 };
 int knobStepIncrement[numberOfKnobs]; 
 int knobMin[numberOfKnobs];
 int knobMax[numberOfKnobs];
-int knobState[numberOfKnobs];  // can't do paired ints'...
+int knobState[numberOfKnobs];  // can't do paired ints'...    ..ooh, erm, structs ???
 int knobCur[numberOfKnobs];  // current reading  ( val )
 //int knobPrev[numberOfKnobs];
 int knobBtState[numberOfKnobs];
@@ -52,7 +57,7 @@ void setup() {
     Serial.println(progVers);
   }
   
-  Tlc.init(0);  // initialise all LEDs' at 0
+  //Tlc.init(0);  // initialise all LEDs' at 0
   
   // init vars
   for(int i = 0; i < numberOfKnobs; i++){
@@ -92,13 +97,13 @@ void loop() {
       Serial.println(knobLEDpos);     
     }
 
-    Tlc.clear();       //clear values before next setup round..
-    Tlc.set(knobLEDpos, LEDmax);  //channel, value
+    //Tlc.clear();       //clear values before next setup round..
+    //Tlc.set(knobLEDpos, LEDmax);  //channel, value
 
     if (LEDindicator[i] == true) {
-      Tlc.set(0, LEDmax );
+      //Tlc.set(0, LEDmax );
     }
-    Tlc.update();      //..now go and do everything for LEDs'
+    //Tlc.update();      //..now go and do everything for LEDs'
   }
 
   delay(mainLoopDelay);
