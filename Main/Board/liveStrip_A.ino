@@ -8,31 +8,30 @@
 // 1x small screen (for channel numbers, VU meter, metronome, etc). currently 2x 8x8 LED matrix
 //
 
-#include <Encoder.h>
 #include <Tlc5940.h>
 
 String progName = "liveStrip test";
-String progVers = "0.01";   //don't need this ???
+String progVers = "0.02";   //don't need this ???
 //String initMsg;
 
 boolean debug = true;
-int mainLoopDelay = 75;
+int mainLoopDelay = 1;
 const int numberOfKnobs = 1;   // 8
 const int numberOfLEDs = 16;   // 16 LEDs per knob
 
-// knob1-16 - leave 0 for system..
-Encoder knob1(2, 4);          // 2, 3 - INTERRUPTS !!! ..can't get round this. can't spread.. have to do case switch..
-//Encoder knob2(6, 7);         // etc..
-//int knobSave[8];             // save current state (8 slots to start with) ..or get latest from computer ???
+int knobPinA[numberOfKnobs] = {2 };
+int knobPinB[numberOfKnobs] = {4 };
+int knobBt[numberOfKnobs] = {5 };
 
 //int knobType = 0;  // 0 = normal, 1 = pan
-int knobSpeed[numberOfKnobs]; // speed multiplier. default = 1
+//int knobSpeed[numberOfKnobs]; // speed multiplier. default = 1  ( stepIncrement )
+int knobStepIncrement[numberOfKnobs]; 
 int knobMin[numberOfKnobs];
 int knobMax[numberOfKnobs];
-int knobCur[numberOfKnobs];  // current reading
-int knobPrev[numberOfKnobs];
-//long knobCur[numberOfKnobs];
-//long knobPrev[numberOfKnobs];
+int knobState[numberOfKnobs];  // can't do paired ints'...
+int knobCur[numberOfKnobs];  // current reading  ( val )
+//int knobPrev[numberOfKnobs];
+int knobBtState[numberOfKnobs];
 int LEDstart[numberOfKnobs];
 int LEDend[numberOfKnobs];
 boolean LEDindicator[numberOfKnobs];  // LED at bottom can be used for indicator of some sorts, or just constant marker
@@ -42,21 +41,29 @@ int LEDmax = 1023; //511  2047  4095;  // ..global for the moment
 
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println(".");
-  Serial.print(progName);
-  Serial.print(" ");
-  Serial.println(progVers);
+  if (debug) {
+    Serial.begin(9600);
+    Serial.println(".");
+    Serial.print(progName);
+    Serial.print(" ");
+    Serial.println(progVers);
+  }
   
   Tlc.init(0);  // initialise all LEDs' at 0
   
   // init vars
   for(int i = 0; i < numberOfKnobs; i++){
-    knobSpeed[i] = 2;
+    pinMode(knobPinA[i], INPUT);
+    pinMode(knobPinB[i], INPUT);
+    pinMode(knobBt[i], INPUT);
+    //knobSpeed[i] = 5;  // speed multiplier. default = 1  ( stepIncrement )
+    knobStepIncrement[i] = 5;
     knobMin[i] = 0;
     knobMax[i] = 127;
-    knobCur[i] = 0;  // current value
-    knobPrev[i] = 0; // previous value
+    knobState[i] = 0;
+    knobCur[i] = 0;  // current value   ( val )
+    //knobPrev[i] = 0; // previous value
+    knobBtState[i] = 0;
     LEDstart[i] = 2;  
     LEDend[i] = 14;
     LEDindicator[i] = true; //false; 
@@ -66,58 +73,72 @@ void setup() {
 void loop() {
   
   for(int i = 0; i < numberOfKnobs; i++){
-    
-    if(i == 0){
-      //knobCur[i] = knob1.read() * knobSpeed[i];
-      knobCur[i] = knob1.read();
-        Serial.print(knobCur[i]);
-        Serial.print(" ");
-      knobCur[i] = knobCur[i] * knobSpeed[i];
-        Serial.print(knobCur[i]);
-        Serial.print(" ");
-      if(knobCur[i] < knobMin[i]){ 
-        knob1.write(knobMin[i] / knobSpeed[i]); 
-        knobCur[i] = knobMin[i];
-      } 
-      else if(knobCur[i] > knobMax[i]){ 
-        knob1.write( (knobMax[i] + 1 ) / knobSpeed[i]); 
-        knobCur[i] = knobMax[i];
-      }
-    } 
-/*  else if(i == 1){ .. }
-    else if(i == 2){ .. }  */
-    //etc..  
 
-        Serial.print(knobCur[i]);
-        Serial.print(" ");
-    //if(knobCur[i] != knobPrev[i]){ knobPrev[i] = knobCur[i]; }
+    knobRead(i);
+    knobBtRead(i);
     
-/*  knobCur[i] = knobCur[i] * knobSpeed[i];
-    knobCur[i] = constrain(knobCur[i], knobMin[i], knobMax[i]);
-      Serial.print(knobCur[i]);
-      Serial.print(" "); */
-  
-    int knobLEDpos = map(knobCur[i], knobMin[i], knobMax[i], LEDstart[i], LEDend[i]);
-      Serial.println(knobLEDpos);
-    //knob1.write(0);  // virtual reset/change/.. when switching between synths
-  
-    Tlc.clear();       //clear values before next setup round..
-    
-    Tlc.set(knobLEDpos, LEDmax);  //channel, value
-    
-    /*if(knobLEDpos != LEDstart[i]){
-      Tlc.set(knobLEDpos - 1, LEDmax / 4);
+    if(knobBtState[i] == 1) {
+      // do something with the button, then reset
+      knobCur[i] = 0;
+      knobBtState[i] = 0;
     }
-    if(knobLEDpos != LEDend[i]){
-      Tlc.set(knobLEDpos + 1, LEDmax / 4);
-    }*/
     
+    int knobLEDpos = map(knobCur[i], knobMin[i], knobMax[i], LEDstart[i], LEDend[i]);
+    if(debug) { 
+      Serial.print(" | LED pos: "); 
+      Serial.println(knobLEDpos);     
+    }
+
+    Tlc.clear();       //clear values before next setup round..
+    Tlc.set(knobLEDpos, LEDmax);  //channel, value
+
     if (LEDindicator[i] == true) {
       Tlc.set(0, LEDmax );
     }
-    
     Tlc.update();      //..now go and do everything for LEDs'
   }
 
   delay(mainLoopDelay);
+}
+
+void knobRead(int i) {
+  boolean a = digitalRead(knobPinA[i]);
+  boolean b = digitalRead(knobPinB[i]);
+   
+  if(a == LOW && b == LOW){
+    //Set value
+    if(knobState[i] == 1){
+      if(knobCur[i] > knobMin[i]){
+        knobCur[i] -= knobStepIncrement[i]; //knobSpeed[i];
+      }
+    }
+    if(knobState[i] == 2){
+      if(knobCur[i] < knobMax[i]){
+        knobCur[i] += knobStepIncrement[i]; //knobSpeed[i];
+      }
+    }
+    knobState[i] = 4;
+  }
+  else if(a == LOW && b == HIGH){
+    if(knobState[i] != 4)
+      knobState[i] = 1;
+  }
+  else if(a == HIGH && b == LOW){
+    if(knobState[i] != 4)
+      knobState[i] = 2;
+  }
+  else if(a == HIGH && b == HIGH){
+     knobState[i] = 0;
+  }
+  
+  if(knobCur[i] < knobMin[i]){ knobCur[i] = knobMin[i]; }
+  if(knobCur[i] > knobMax[i]){ knobCur[i] = knobMax[i]; }
+  if(debug) { 
+    Serial.print("Knob cur: "); 
+    Serial.print(knobCur[i], DEC); 
+  }
+}
+
+void knobBtRead(int i) {
+  knobBtState[i] = digitalRead(knobBt[i]);
 }
