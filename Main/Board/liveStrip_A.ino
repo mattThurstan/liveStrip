@@ -1,16 +1,19 @@
-// live strip test
-//
-// 1x rotary encoder
-// 1x LED matrix (2x 8x8)
-//
-// ..eventually..
-// 8x rotary encoders, ringed by 16 leds' (mono colour to start with)
-// 1x small screen (for channel numbers, VU meter, metronome, etc). currently 2x 8x8 LED matrix
-//
+/*
+   liveStrip A 
+   by Thurstan/mattKsp
+   
+   1x rotary encoder
+   1x LED matrix (2x 8x8)
+  
+   ..eventually..
+   8x rotary encoders, ringed by 16 leds' (mono colour to start with)
+   1x small screen (for channel numbers, VU meter, metronome, etc). currently 2x 8x8 LED matrix
+*/
+
 
 #include <Tlc5940.h>
 
-String progName = "liveStrip test";
+String progName = "liveStrip_A test";
 String progVers = "0.02";   //don't need this ???
 //String initMsg;
 
