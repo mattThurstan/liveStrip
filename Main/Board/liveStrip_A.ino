@@ -1,6 +1,6 @@
 /*
    liveStrip A 
-   by Thurstan/mattKsp
+   by M.Standish (Thurstan/mattKsp)
    
    1x rotary encoder
    1x LED matrix (2x 8x8)
