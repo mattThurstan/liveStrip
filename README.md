@@ -35,3 +35,7 @@ This software is provided on an "AS-IS-BASIS".
 
 ### Reference
 https://www.pjrc.com/teensy/td_midi.html<br>
+https://www.pjrc.com/teensy/td_libs_Encoder.html - don't think i will use this as it seems overkill, 
+	only need these kind of optimisations for when reading a wheel turning or engines, fast stuff. also have to 
+	consider processing power availability<br>
+ 
