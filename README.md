@@ -28,10 +28,10 @@ Transmits and receives MIDI Notes, CC & Sysex messages over USB
 - usbMIDI library (teensy)
 
 ### Licence
-- Written by M.Standish (Thurstan/mattKsp)
+- Written by MTS Standish (Thurstan|mattKsp) 2016
 - Released under GNU GPLv3 (see LICENCE file)
 
-This software is provided on an "AS-IS-BASIS".
+This software is provided on an "AS-IS-BASIS"
 
 ### Reference
 https://www.pjrc.com/teensy/td_midi.html<br>
