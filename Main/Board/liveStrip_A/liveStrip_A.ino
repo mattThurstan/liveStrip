@@ -22,6 +22,11 @@
 /*
  * 8x rotary encoders, ringed by 8x and 16 LED (mono colour to start with)
  * 1x small screen (for channel numbers, VU meter, metronome, etc). - currently 2x 8x8 LED matrix
+ * 
+ * numbers consideration 
+ * - floats take up way more space than an int, but then you have to divide the int and convert to a float.
+ * calculation is minimal, but also with what we are doing here, we do not need to penny-pinch on memory space.
+ * therefore just gonna use floats for this one and take the hit. the board can cope.
  */
  
 /*----------------------------|----------------------------*/
@@ -34,50 +39,39 @@ const String _progName = "liveStrip_A";
 const String _progVers = "0.03";
 boolean _debug = true;
 const int _mainLoopDelay = 0;   //just in case
-int _orientation = 0;           //default orientation. 0-99 is same as 0-359  //normally only use 0 and 50 (0deg and 180deg), but can rotate faders to any angle.
+int _orientation = 0;           //current orientation. 0-359  Can rotate faders to any angle.
 
 /*----------------------------knob----------------------------*/
 const int _knobTotal = 8;                                             //total knobs on device (default=8)
-const int _knobPinA[_knobTotal] = { 0, 2, 4, 6, 8, 10, 12, 15 };      //Teensy 3.2 pin assignments
+lsRotaryEncoder _knob[_knobTotal];                                    //call blank constructors for init registration of knobs
+const int _knobPinA[_knobTotal] = { 0, 2, 4, 6, 8, 10, 12, 15 };      //Teensy 3.2 pin assignments (encoders need 2 pins each). interrupt pins
 const int _knobPinB[_knobTotal] = { 1, 3, 5, 7, 9, 11, 14, 16 };      //miss out pin 13
-volatile int _knobSpeed = 100;        //divide by 100 for float       //speed multiplier
-
-int _knobType = 0;                                                    //0=fixed rotary, 1=endless rotary, 2=pan, etc.
-int _knobLimit[_knobTotal][2] = { {20}, {80} };       //divide by 100 for float       //start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
-volatile int _knobRange[_knobTotal][2] = { {20}, {80} };       //divide by 100 for float       //start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
-
-
-//have to set these up here cos library isn't set up for intitialising with empty arrays etc.
-//lsRotaryEncoder knob[_knobTotal] {
-//  lsRotaryEncoder(_knobPinA[0], _knobPinB[0]),
-//  lsRotaryEncoder(_knobPinA[1], _knobPinB[1]),
-//  lsRotaryEncoder(_knobPinA[2], _knobPinB[2]),
-//  lsRotaryEncoder(_knobPinA[3], _knobPinB[3]),
-//  lsRotaryEncoder(_knobPinA[4], _knobPinB[4]),
-//  lsRotaryEncoder(_knobPinA[5], _knobPinB[5]),
-//  lsRotaryEncoder(_knobPinA[6], _knobPinB[6]),
-//  lsRotaryEncoder(_knobPinA[7], _knobPinB[7])
-//  };
-//yes i can.. erm, i think
-lsRotaryEncoder _knob[_knobTotal];   //call blank constructors for init
+int _knobMidiCC[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };     //MIDI CC values
+int _knobType[_knobTotal] = { 0 };                                    //0=fixed rotary, 1=endless rotary, 2=pan, etc.
+float _knobLimit[2][_knobTotal] = { {2.0}, {8.0} };                   //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
+volatile float _knobRange[2][_knobTotal] = { {0.0}, {1.0} };          //0-1 Start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
+boolean _knobAffectSpeed[_knobTotal] = { false };                     //whether the knob is currently using this speed multiplier. eg. switch between slow/fast by clicking button.
+volatile float _knobSpeed[_knobTotal] = { 1 };                        //speed multiplier
 
 /*----------------------------button----------------------------*/
-const int _endButtonTotal = 3;                                //somewhere between 3 and 5 buttons at the end
-const int _endButtonPin[_endButtonTotal] = { 17, 18, 19 };
-//const int _knobButtonPin[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };       //if used knob buttons will be push switches integrated into the shaft of the encoder
-//const int _otherButtonPin[1] = { 30 };                        //extras, not worth running a total for
+const int _endButtonTotal = 5;                                        //somewhere between 3 and 5 buttons at the end
+const int _endButtonPin[_endButtonTotal] = { 17, 18, 19, 20, 21 };            //Teensy 3.2 pin assignments. interrupt pins
+const int _knobButtonPin[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };  //if used knob buttons will be push switches integrated into the shaft of the encoder. this may be changed to capacitive touch
+const int _otherButtonPin[1] = { 30 };                                //extras, not worth running a total for.. (used for system, does not send MIDI)
+int _endButtonMidiNote[_endButtonTotal] = { 0, 1, 2, 3, 4 };                //MIDI note values for end buttons
+int _knobButtonMidiNote[_knobTotal] = {10, 11, 12, 13, 14, 15, 16, 17 };    //MIDI note values for knob buttons (if used)
 
 /*----------------------------display----------------------------*/
-int _displayBrightnessGlobal = 100; //divide by 100 for float //global brightness for displays/LEDs
+float _displayBrightnessGlobal = 1;                                   //global brightness for displays/LEDs
 /*-----------display - screen------------*/
 
 /*-----------display - led------------*/
-const int _knobLEDRingATotal = 8;                             //16
-const int _knobLEDRingBTotal = 16;                            //32
+const int _knobLEDRingATotal = 8;                                     //16
+const int _knobLEDRingBTotal = 16;                                    //32
 
 /*----------------------------communication----------------------------*/
 /*-----------communication - MIDI------------*/
-int _defaultMIDIChannel = 1;           //the default MIDI channel
+int _defaultMIDIChannel = 1;                                          //the default MIDI channel
 
 
 /*----------------------------MAIN----------------------------*/
