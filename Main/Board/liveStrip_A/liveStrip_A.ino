@@ -1,4 +1,3 @@
-
 /*
     'liveStrip A' by Thurstan. MIDI controller for use (primarily) with Ableton Live devices.
     Copyright (C) 2016  MTS Standish (Thurstan|mattKsp)
@@ -33,6 +32,8 @@
 
 #include<EEPROM.h>            //for saving and loading from the EEPROM on the board
 #include <lsRotaryEncoder.h>  //continous rotary encoder functions for liveStrip wrapped up in a library because..
+#include <Bounce2.h>          //buttons with de-bounce
+//MIDI  - as board type is set to 'Teensy MIDI' we can use its MIDI library (usbMidi.) without declaring it
 
 /*----------------------------system----------------------------*/
 const String _progName = "liveStrip_A";
@@ -51,7 +52,7 @@ int _knobType[_knobTotal] = { 0 };                                    //0=fixed 
 float _knobLimit[2][_knobTotal] = { {2.0}, {8.0} };                   //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
 volatile float _knobRange[2][_knobTotal] = { {0.0}, {1.0} };          //0-1 Start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
 boolean _knobAffectSpeed[_knobTotal] = { false };                     //whether the knob is currently using this speed multiplier. eg. switch between slow/fast by clicking button.
-volatile float _knobSpeed[_knobTotal] = { 1 };                        //speed multiplier
+volatile float _knobSpeed[_knobTotal] = { 1.0 };                        //speed multiplier
 
 /*----------------------------button----------------------------*/
 const int _endButtonTotal = 5;                                        //somewhere between 3 and 5 buttons at the end
@@ -62,7 +63,8 @@ int _endButtonMidiNote[_endButtonTotal] = { 0, 1, 2, 3, 4 };                //MI
 int _knobButtonMidiNote[_knobTotal] = {10, 11, 12, 13, 14, 15, 16, 17 };    //MIDI note values for knob buttons (if used)
 
 /*----------------------------display----------------------------*/
-float _displayBrightnessGlobal = 1;                                   //global brightness for displays/LEDs
+int _meteringSource = 2;  //when displaying knob values, do we a) take the value straight from the knob, b) wait for the bounce-back from the sequencer, or c) compare and use both. (this could be usefull)
+float _displayBrightnessGlobal = 1.0;                                   //global brightness for displays/LEDs
 /*-----------display - screen------------*/
 
 /*-----------display - led------------*/
