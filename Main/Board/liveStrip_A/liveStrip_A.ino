@@ -26,6 +26,8 @@
  * - floats take up way more space than an int, but then you have to divide the int and convert to a float.
  * calculation is minimal, but also with what we are doing here, we do not need to penny-pinch on memory space.
  * therefore just gonna use floats for this one and take the hit. the board can cope.
+ * ..
+ * ..damn, 
  */
  
 /*----------------------------|----------------------------*/
@@ -52,7 +54,7 @@ int _knobMidiCC[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };     //MIDI CC 
 int _knobBehaviour[_knobTotal] = { 0 };                               //0=fixed rotary, 1=endless rotary, 2=pan, etc.
 float _knobLimit[2][_knobTotal] = { {2.0}, {8.0} };                   //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
 volatile float _knobRange[2][_knobTotal] = { {0.0}, {1.0} };          //0-1 Start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
-volatile float _knobCenter[_knobTotal] = { 0.5 };                     //we can move the center point.. hmm.. have to make sure it stays inside knob range
+volatile float _knobCenter[_knobTotal] = { 0.5 };                     //we can move the center point.. hmm.. this ltes us do velocity curves.. have to make sure it stays inside knob range
 boolean _knobSpeedAltInUse[_knobTotal] = { false };                   //whether the knob is currently using this speed multiplier. eg. switch between slow/fast by clicking button.
 volatile float _knobSpeed[2][_knobTotal] = { {1.0}, {0.25} };         //normal speed multiplier and alternate speed multiplier
 

@@ -1,5 +1,5 @@
 /*----------------------------knobs----------------------------*/
-
+/*-----------knobs - setup------------*/
 void setupKnob() {
   //called from setup
   for (int i = 0; i < _knobTotal; i++) {
@@ -47,3 +47,6 @@ void interruptA6() { _knob[6].doUpdate(); }
 void interruptB6() { _knob[6].doUpdate(); }
 void interruptA7() { _knob[7].doUpdate(); }
 void interruptB7() { _knob[7].doUpdate(); }
+
+/*-----------knobs - get------------*/
+
