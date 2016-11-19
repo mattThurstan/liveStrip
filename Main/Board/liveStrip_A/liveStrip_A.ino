@@ -33,9 +33,10 @@
 /*----------------------------|----------------------------*/
 
 #include<EEPROM.h>            //for saving and loading from the EEPROM on the board
-#include <lsRotaryEncoder.h>  //continous rotary encoder functions for liveStrip wrapped up in a library because..
+#include <lsRotaryEncoder.h>  //continous rotary encoder functions for liveStrip wrapped up in a library because easier..
 #include <Bounce2.h>          //buttons with de-bounce
-//MIDI  - as board type is set to 'Teensy MIDI' we can use its MIDI library (usbMidi.) without declaring it
+//MIDI  - as board type is set to 'Teensy MIDI' we can use its MIDI library (usbMidi.*) without declaring it
+#include <elapsedMillis.h>    //used to limit 'get' rate of the knobs. only getting the values from a knob every 20ms equates to sending 50 midi messages a second, which is still quite a lot
 
 /*----------------------------system----------------------------*/
 const String _progName = "liveStrip_A";
@@ -46,35 +47,46 @@ int _orientation = 0;           //current orientation. 0-359  Can rotate faders 
 boolean _menuMode = false;      //flag for when we switch into menu mode
 
 /*----------------------------knob----------------------------*/
+//..need to know how many hardware 'clicks' equals 1 revolution
 const int _knobTotal = 8;                                             //total knobs on device (default=8)
+elapsedMillis _knobGetTimeElapsed;                                    //elapsed time for delaying knob get.
+const unsigned int _knobGetInterval = 20;                             //delay in milliseconds. only getting the values from a knob every 20ms equates to sending 50 midi messages a second
 lsRotaryEncoder _knob[_knobTotal];                                    //call blank constructors for init registration of knobs
 const int _knobPinA[_knobTotal] = { 0, 2, 4, 6, 8, 10, 12, 15 };      //Teensy 3.2 pin assignments (encoders need 2 pins each). interrupt pins
 const int _knobPinB[_knobTotal] = { 1, 3, 5, 7, 9, 11, 14, 16 };      //miss out pin 13
-int _knobMidiCC[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };     //MIDI CC values
-int _knobBehaviour[_knobTotal] = { 0 };                               //0=fixed rotary, 1=endless rotary, 2=pan, etc.
-float _knobLimit[2][_knobTotal] = { {2.0}, {8.0} };                   //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
+int _knobMidiCC[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };     //MIDI CC send value assigns
+//sent MIDI value gets restricted between  and 127 depending on the following
+int _knobBehaviour[_knobTotal] = { 0 };                               //0=fixed rotary, 1=endless rotary(bit useless), 2=pan, etc.
+volatile float _knobLimit[2][_knobTotal] = { {2.0}, {8.0} };          //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0
 volatile float _knobRange[2][_knobTotal] = { {0.0}, {1.0} };          //0-1 Start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
-volatile float _knobCenter[_knobTotal] = { 0.5 };                     //we can move the center point.. hmm.. this ltes us do velocity curves.. have to make sure it stays inside knob range
+volatile float _knobCenter[_knobTotal] = { 0.5 };                     //we can move the center point.. hmm.. this lets us do velocity curves.. have to make sure it stays inside knob range
 boolean _knobSpeedAltInUse[_knobTotal] = { false };                   //whether the knob is currently using this speed multiplier. eg. switch between slow/fast by clicking button.
 volatile float _knobSpeed[2][_knobTotal] = { {1.0}, {0.25} };         //normal speed multiplier and alternate speed multiplier
 
 /*----------------------------button----------------------------*/
+Bounce _knobButton[_knobTotal];                                       //knob buttons
+unsigned long _knobButtonDebounceTime = 5;                            //unsigned long (5ms)
+const int _knobButtonPin[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };  //if used knob buttons will be push switches integrated into the shaft of the encoder. this may be changed to capacitive touch
+int _knobButtonMidiNote[_knobTotal] = {10, 11, 12, 13, 14, 15, 16, 17 };    //MIDI note values for knob buttons (if used)
+int _knobButtonMidiOnValue[_knobTotal] = { 127 };                           //0-127 or 64 - value to send out in MIDI message
+int _knobButtonMidiOffValue[_knobTotal] = { 0 };                      //0-127 - ..
+
 const int _endButtonTotal = 5;                                        //somewhere between 3 and 5 buttons at the end
 Bounce _endButton[_endButtonTotal];                                   //de-bounced buttons
-Bounce _knobButton[_knobTotal];                                       //knob buttons
+unsigned long _endButtonDebounceTime = 5;                             //unsigned long (5ms)
+const int _endButtonPin[_endButtonTotal] = { 17, 18, 19, 20, 21 };    //Teensy 3.2 pin assignments. interrupt pins
+int _endButtonMidiNote[_endButtonTotal] = { 0, 1, 2, 3, 4 };          //MIDI note values for end buttons
+//int _endButtonTriggerStyle[_knobTotal] = { 2 };                     //when sending MIDI messages, send on.. a)rose, b)fell, or c)change (.read)   ...later
+int _endButtonMidiCC[_endButtonTotal] = { 85, 86, 87, 88, 89 };       //MIDI CC values for end buttons (90 is also available in this range set)
+int _endButtonType[_endButtonTotal] = { 0 };                          //0=MIDI note 1=MIDI CC
+int _endButtonBehaviour[_endButtonTotal] = { 0 };                     //0=momentary 1=toggle
+boolean _endButtonToggleState[_endButtonTotal] = { false };           //toggle state - false=off true=on    //this can also be adjusted dependant on metering source
+int _endButtonMidiOnValue[_endButtonTotal] = { 127 };                 //0-127 or 64 - value to send out in MIDI message
+int _endButtonMidiOffValue[_endButtonTotal] = { 0 };                  //0-127 - ..
+
 Bounce _otherButton;                                                  //extra button for system stuff
-const int _endButtonPin[_endButtonTotal] = { 17, 18, 19, 20, 21 };          //Teensy 3.2 pin assignments. interrupt pins
-const int _knobButtonPin[_knobTotal] = { 22, 23, 24, 25, 26, 27, 28, 29 };  //if used knob buttons will be push switches integrated into the shaft of the encoder. this may be changed to capacitive touch
-const int _otherButtonPin = 30;                                             //extra, only need one to start with.. accessible when in menu mode (used for system, does not send MIDI)
-int _endButtonMidiNote[_endButtonTotal] = { 0, 1, 2, 3, 4 };                //MIDI note values for end buttons
-int _knobButtonMidiNote[_knobTotal] = {10, 11, 12, 13, 14, 15, 16, 17 };    //MIDI note values for knob buttons (if used)
-//int _endButtonTriggerStyle[_knobTotal] = { 2 };                             //when sending MIDI messages, send on.. a)rose, b)fell, or c)change (.read)
-int _endButtonMidiCC[_knobTotal] = { 85, 86, 87, 88, 89 };            //MIDI CC values for end buttons (90 is also available in this range set)
-int _endButtonType[_knobTotal] = { 0 };                               //0=MIDI note 1=MIDI CC
-int _endButtonBehaviour[_knobTotal] = { 0 };                          //0=momentary 1=toggle
-boolean _endButtonToggleState[_knobTotal] = { false };                //toggle state - false=off true=on    //this can also be adjusted dependant on metering source
-int _endButtonMidiOnValue[_knobTotal] = { 127 };                      //0-127 - value to send out in MIDI message
-int _endButtonMidiOffValue[_knobTotal] = { 0 };                       //0-127 - ..
+unsigned long _otherButtonDebounceTime = 5;                           //unsigned long (5ms)
+const int _otherButtonPin = 30;                                       //extra, only need one to start with.. accessible when in menu mode (used for system, does not send MIDI)
 
 /*----------------------------display----------------------------*/
 int _knobMeteringSource = 2;                                          //value source for metering
@@ -111,6 +123,11 @@ void setup() {
 }
 
 void loop() {
+  
+  //endButtonGet();
+  //knobButtonGet();
+  //otherButtonGet();
+  
   //
   delay(_mainLoopDelay);
 }

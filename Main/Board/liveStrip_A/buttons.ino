@@ -5,28 +5,29 @@ void setupButton() {
   
   //..do setup for each end button
   for (int i = 0; i < _endButtonTotal; i++) {
-    pinMode(_endButtonPin[i], INPUT_PULLUP);  //activate internal pullup resistor on pin
+    pinMode(_endButtonPin[i], INPUT_PULLUP);  //activate internal pullup resistor on pin //could do this also thru button[i].attach(pin, mode)
     _endButton[i].attach(_endButtonPin[i]);   //attach pin to empty bounce button
-    _endButton[i].debounceTime = 5;           //unsigned long (5ms)
+    _endButton[i].interval = _endButtonDebounceTime;           //unsigned long (5ms)
   }
 
   //do setup for each knob button
   for (int i = 0; i < _knobTotal; i++) {
     pinMode(_knobButtonPin[i], INPUT_PULLUP); //activate internal pullup resistor on pin
     _knobButton[i].attach(_knobButtonPin[i]); //attach pin to empty bounce button
-    _knobButton[i].debounceTime = 5;          //unsigned long (5ms)
+    _knobButton[i].interval = _knobButtonDebounceTime;          //unsigned long (5ms)
   }
 
   //setup other button
   pinMode(_otherButtonPin, INPUT_PULLUP);     //activate internal pullup resistor on pin
   _otherButton.attach(_otherButtonPin);       //attach pin to empty bounce button
-  _otherButton.debounceTime = 5;              //unsigned long (5ms)
+  _otherButton.interval = _otherButtonDebounceTime;              //unsigned long (5ms)
 
   //setupEndButtonInterrupts(); //OVERKILL
 }
 
+/*-----------buttons - get------------*/
 void endButtonGet() {
-  //sub-loop. reads all the end buttons
+  //sub-loop. reads all the end buttons (called from somewhere in main loop)
   for (int i = 0; i < _endButtonTotal; i++) {
     boolean hasChanged = _endButton[i].update();  //Bounce buttons keep internal track of whether any change has occured since last time
     
@@ -126,7 +127,7 @@ void endButtonGet() {
 void knobButtonGet() {
   //sub-loop. reads all the knob buttons (if used)
   for (int i = 0; i < _knobTotal; i++) {
-    
+    //NOT IN USE YET ..will need to scan cos not enough pins
   } //END main for loop
 } //END knobButtonGet
 

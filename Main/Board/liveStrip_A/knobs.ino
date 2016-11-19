@@ -1,4 +1,5 @@
 /*----------------------------knobs----------------------------*/
+
 /*-----------knobs - setup------------*/
 void setupKnob() {
   //called from setup
@@ -49,4 +50,17 @@ void interruptA7() { _knob[7].doUpdate(); }
 void interruptB7() { _knob[7].doUpdate(); }
 
 /*-----------knobs - get------------*/
+void knobGet() {
+  //called from main loop
+  if (_knobGetTimeElapsed >= _knobGetInterval) {
+    //do get for each knob
+    for (int i = 0; i < _knobTotal; i++) {
+      //how to handle time?
+      //compare old and new
+      //if changed..
+      //send MIDI message
+    }
+    _knobGetTimeElapsed = 0;
+  }
+}
 
