@@ -7,20 +7,20 @@ void setupButton() {
   for (int i = 0; i < _endButtonTotal; i++) {
     pinMode(_endButtonPin[i], INPUT_PULLUP);  //activate internal pullup resistor on pin //could do this also thru button[i].attach(pin, mode)
     _endButton[i].attach(_endButtonPin[i]);   //attach pin to empty bounce button
-    _endButton[i].interval = _endButtonDebounceTime;           //unsigned long (5ms)
+    _endButton[i].interval(_endButtonDebounceTime);           //unsigned long (5ms)
   }
 
   //do setup for each knob button
   for (int i = 0; i < _knobTotal; i++) {
     pinMode(_knobButtonPin[i], INPUT_PULLUP); //activate internal pullup resistor on pin
     _knobButton[i].attach(_knobButtonPin[i]); //attach pin to empty bounce button
-    _knobButton[i].interval = _knobButtonDebounceTime;          //unsigned long (5ms)
+    _knobButton[i].interval(_knobButtonDebounceTime);          //unsigned long (5ms)
   }
 
   //setup other button
   pinMode(_otherButtonPin, INPUT_PULLUP);     //activate internal pullup resistor on pin
   _otherButton.attach(_otherButtonPin);       //attach pin to empty bounce button
-  _otherButton.interval = _otherButtonDebounceTime;              //unsigned long (5ms)
+  _otherButton.interval(_otherButtonDebounceTime);              //unsigned long (5ms)
 
   //setupEndButtonInterrupts(); //OVERKILL
 }
@@ -72,7 +72,7 @@ void endButtonGet() {
               //usbMIDI.send_now();
               //flashMessage
             }
-          } else if {
+          } else {
             //send On
             if (_endButtonType[i]== 0) {
               //send MIDI note On
@@ -128,6 +128,35 @@ void knobButtonGet() {
   //sub-loop. reads all the knob buttons (if used)
   for (int i = 0; i < _knobTotal; i++) {
     //NOT IN USE YET ..will need to scan cos not enough pins
+    //tell each knob to change its speed OR send MIDI CC
+    
+    if (_knobButtonType[i] == 0) {
+          //internal switch precision/speed - default
+          _knobButtonBehaviour[i] = 1; //_knobButtonBehaviour is always toggle (1) in this type mode - set here just to make sure - this should be under buttons really
+          //
+          if (_knobButtonToggleState[i]) {
+            //set _knobSpeed[2][i] to orig speed
+            //set _knobSpeedAltInUse to false
+            _knob[i].setCurSpeed(_knobSpeed[0][i]);
+            _knobSpeedAltInUse[i] = false;
+          } else {
+            //set _knobSpeed[2][i] to alt speed
+            //set _knobSpeedAltInUse to true
+            _knob[i].setCurSpeed(_knobSpeed[1][i]);
+            _knobSpeedAltInUse[i] = true;
+          }
+          //
+        } else if (_knobButtonType[i] == 1) {
+          //send MIDI CC
+          if (_knobButtonBehaviour[i] == 0) {
+            //momentary
+            //
+          } else if (_knobButtonBehaviour[i] == 1) {
+            //toggle
+            //
+          }
+        } //END send MIDI CC
+        
   } //END main for loop
 } //END knobButtonGet
 
@@ -137,7 +166,14 @@ void otherButtonGet() {
   if (_menuMode) {
     boolean hasChanged = _otherButton.update();  //Bounce buttons keep internal track of whether any change has occured since last time
     if (hasChanged) {
-      if (_otherbutton.read()) {
+//      int value = _otherButton.read();
+//      if (value == HIGH) {
+//        //
+//      } else {
+//        //
+//      }
+      //OR
+      if (_otherButton.read()) {
         //
       }
     }
