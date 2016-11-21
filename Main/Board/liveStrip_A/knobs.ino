@@ -68,7 +68,7 @@ void knobGet() {
         if (_knobBehaviour[i] == 0) {                               
           //0=fixed rotary
           
-          int _knobClicksPerRev = 2048; //??????  ..*1000
+          int _knobClicksPerRev = 4096; //2048 ??????  ..*1000
           int r = _knobClicksPerRev * 1000; //to put it into the same range that we are getting from lsRotaryEncoder
           
           int c = constrain(cur, r * _knobLimit[0][i], r * _knobLimit[1][i]);
