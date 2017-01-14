@@ -32,8 +32,24 @@ void setupKnobInterrupts() {
   attachInterrupt(_knobPinB[7], interruptB7, CHANGE);
 }
 
-void interruptA0() { _knob[0].doUpdate(); }
-void interruptB0() { _knob[0].doUpdate(); }
+void interruptA0() {
+    //boolean u = _knob[0].getUpdateLock();
+    //if (!u) { _knob[0].doUpdate(); }
+    if (!TEMPknobUpdateLock) {
+      TEMPknobUpdateLock = true;  //lock it, do stuff, then unlock it
+      _knob[0].doUpdate();
+      TEMPknobUpdateLock = false;
+    }
+  }
+void interruptB0() {
+    //boolean u = _knob[0].getUpdateLock();
+    //if (!u) { _knob[0].doUpdate(); }
+    if (!TEMPknobUpdateLock) {
+      TEMPknobUpdateLock = true;  //lock it, do stuff, then unlock it
+      _knob[0].doUpdate();
+      TEMPknobUpdateLock = false;
+    }
+  }
 void interruptA1() { _knob[1].doUpdate(); }
 void interruptB1() { _knob[1].doUpdate(); }
 void interruptA2() { _knob[2].doUpdate(); }
@@ -61,62 +77,39 @@ void knobGet() {
       //long pre = _knob[i].getPrevPosition();  //hmm.. this will always be different cos it only gets changed when something happens and interrupt fires update
       boolean hasChanged = _knob[i].getHasChanged();
 
-      //if changed..
-      //map cur pos to
       if (hasChanged) {
-      
+        
+        int _knobClicksPerRev = 20; //2048 ??????  ..*1000
+        int r = _knobClicksPerRev * 1000; //to put it into the same range that we are getting from lsRotaryEncoder
+        int c = 0;
+        int m = 0;
+        
         if (_knobBehaviour[i] == 0) {                               
           //0=fixed rotary
-          
-          int _knobClicksPerRev = 4096; //2048 ??????  ..*1000
-          int r = _knobClicksPerRev * 1000; //to put it into the same range that we are getting from lsRotaryEncoder
-          
-          int c = constrain(cur, r * _knobLimit[0][i], r * _knobLimit[1][i]);
-          
-          int m = map(c, 0, r, 0, 127);  //puts it into MIDI CC range - 8 bit
-          
-          int mmm = constrain(m, (127 * _knobRange[0][i]), (127 * _knobRange[1][i]));
-          
-          //send MIDI message
-          usbMIDI.sendControlChange(_knobMidiCC[i], mmm, _midiChannel);  //control, value, channel
-          //usbMIDI.send_now();
-
-          _knobCurMidiCCSend[i] = mmm;
-          
+          c = constrain(cur, r * _knobLimit[0][i], r * _knobLimit[1][i]);
+          m = map(c, 0, r, 0, 127);  //puts it into MIDI CC range - 8 bit
         } else if (_knobBehaviour[i] == 1) {
           //endless rotary(bit useless)
         } else if (_knobBehaviour[i] == 2) {
           //pan, etc.
-
-          int _knobClicksPerRev = 2048; //??????  ..*1000
-          int r = _knobClicksPerRev * 1000; //to put it into the same range that we are getting from lsRotaryEncoder
-          
-          int c = constrain(cur, -((r * _knobLimit[0][i])/2), ((r * _knobLimit[1][i])/2) ); //shifts it (in this example half to the left. 0 moves to -1024, 2048 to 1024
-          
-          int m = map(c, -(r/2), (r/2), 0, 127);  //puts it into MIDI CC range - 8 bit
-          
-          int mmm = constrain(m, (127 * _knobRange[0][i]), (127 * _knobRange[1][i]));
-          
-          //send MIDI message
-          usbMIDI.sendControlChange(_knobMidiCC[i], mmm, _midiChannel);  //control, value, channel
-          //usbMIDI.send_now();
-
-          _knobCurMidiCCSend[i] = mmm;
-          
+          c = constrain(cur, -((r * _knobLimit[0][i])/2), ((r * _knobLimit[1][i])/2) ); //shifts it (in this example half to the left. 0 moves to -1024, 2048 to 1024
+          m = map(c, -(r/2), (r/2), 0, 127);  //puts it into MIDI CC range - 8 bit
         }
-
-    } //END if hasChanged
+        
+        int mmm = 0;
+        mmm = constrain(m, (127 * _knobRange[0][i]), (127 * _knobRange[1][i]));
+        _knobCurMidiCCSend[i] = mmm;
+        
+        //send MIDI message
+        usbMIDI.sendControlChange(_knobMidiCC[i], cur, _midiChannel);  //control, value, channel
+        //usbMIDI.sendControlChange(_knobMidiCC[i], mmm, _midiChannel);  //control, value, channel
+        usbMIDI.send_now();
+          
+      } //END if hasChanged
       
     } //END _knobTotal for loop
     
     _knobGetTimeElapsed = 0;
   }
 }
-////sent MIDI value gets restricted between  and 127 depending on the following
-//int _knobBehaviour[_knobTotal] = { 0 };                               //0=fixed rotary, 1=endless rotary(bit useless), 2=pan, etc.
-//volatile float _knobLimit[2][_knobTotal] = { {0.2}, {0.8} };          //0-1 Start and end of simulated rotary limits. eg. like a real desk pot - used by type 0 - this should prob be under display
-//volatile float _knobRange[2][_knobTotal] = { {0.0}, {1.0} };          //0-1 Start and end of restricted range within limits. eg. like MIDI mapping in a DAW - used by type 0, 1, 2
-//volatile float _knobCenter[_knobTotal] = { 0.5 };                     //we can move the center point.. hmm.. this lets us do velocity curves.. have to make sure it stays inside knob range
-//boolean _knobSpeedAltInUse[_knobTotal] = { false };                   //whether the knob is currently using this speed multiplier. eg. switch between slow/fast by clicking button.
-//volatile float _knobSpeed[2][_knobTotal] = { {1.0}, {0.25} };         //normal speed multiplier and alternate speed multiplier
 

@@ -49,3 +49,19 @@ void displaySet() {
   
 }
 
+
+/*-----------displays - status------------*/
+void blinkStatusLED() {
+  //this delays the whole script. use sparingly
+  digitalWrite(TEMPstatusLED, HIGH);
+  delay(250);
+  digitalWrite(TEMPstatusLED, LOW);
+  delay(250);
+  digitalWrite(TEMPstatusLED, HIGH);
+  delay(250);
+  digitalWrite(TEMPstatusLED, LOW);
+  delay(250);
+  digitalWrite(TEMPstatusLED, HIGH);
+  delay(250);
+  digitalWrite(TEMPstatusLED, LOW);
+}

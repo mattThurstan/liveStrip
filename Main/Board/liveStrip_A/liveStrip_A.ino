@@ -31,6 +31,9 @@
  */
  
 /*----------------------------|----------------------------*/
+const int TEMPstatusLED = 13; //internal
+volatile boolean TEMPknobUpdateLock = false;
+
 
 #include<EEPROM.h>            //for saving and loading from the EEPROM on the board
 #include <lsRotaryEncoder.h>  //continous rotary encoder functions for liveStrip wrapped up in a library because easier..
@@ -54,7 +57,7 @@ boolean _menuMode = false;      //flag for when we switch into menu mode
 //..need to know how many hardware 'clicks' equals 1 revolution
 const int _knobTotal = 1;                                             //total knobs on device (default=8)
 elapsedMillis _knobGetTimeElapsed;                                    //elapsed time for delaying knob get.
-const unsigned int _knobGetInterval = 20;                             //delay in milliseconds. only getting the values from a knob every 20ms equates to sending 50 midi messages a second
+const unsigned int _knobGetInterval = 10;//20;                             //delay in milliseconds. only getting the values from a knob every 20ms equates to sending 50 midi messages a second
 lsRotaryEncoder _knob[_knobTotal];                                    //call blank constructors for init registration of knobs
 const int _knobPinA[_knobTotal] = { 0};//, 2, 9, 14, 16, 18, 20, 22 };      //Teensy 3.2 pin assignments (encoders need 2 pins each). interrupt pins
 const int _knobPinB[_knobTotal] = { 1};//, 8, 12, 15, 17, 19, 21, 23 };      //..miss out pins 10-13 !!! (and not for superstitious reasons - apparently many superstitious beliefs and practices are connected with sneezing)
@@ -138,9 +141,12 @@ void setup() {
   //if flag true, play intro display sequence (then if first time run, set flag false)(can be re-enabled at startup from the editor)
   setupKnob();
   setupButton();
-  setupDisplay();
+  //setupDisplay();
   setupCommunication();
+  
   //display somemething quick to indicate setup successfull.
+  pinMode(TEMPstatusLED, OUTPUT);  //init pic 13 as blink
+  blinkStatusLED();
 }
 
 void loop() {
@@ -151,7 +157,7 @@ void loop() {
 
   knobGet();
 
-  displaySet();
+  //displaySet();
 
   //
   // MIDI Controllers should discard incoming MIDI messages.
